@@ -9,7 +9,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:4200', // Desarrollo local Angular
       'http://localhost:3000', // Desarrollo local otros puertos
-      'https://wedding-api-production-dcfe.up.railway.app', // Frontend en producción
+      'https://wedding-app-production-30ec.up.railway.app', // Frontend en producción
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
