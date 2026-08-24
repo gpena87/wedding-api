@@ -21,16 +21,15 @@ let EmailService = EmailService_1 = class EmailService {
     logger = new common_1.Logger(EmailService_1.name);
     constructor(configService) {
         this.configService = configService;
-        const apiKey = this.configService.get('RESEND_API_KEY') ?? '';
+        const apiKey = this.configService.getOrThrow('RESEND_API_KEY');
         this.resend = new resend_1.Resend(apiKey);
     }
     sendNotification(user) {
-        const email = this.configService.get('EMAIL_SEND') ?? '';
+        const email = this.configService.getOrThrow('EMAIL_SEND');
         return (0, rxjs_1.from)((async () => {
             try {
                 const htmlContent = this.generateEmailHTML(user);
-                const from = this.configService.get('EMAIL_FROM') ??
-                    'onboarding@resend.dev';
+                const from = this.configService.getOrThrow('EMAIL_FROM');
                 const { error } = await this.resend.emails.send({
                     from,
                     to: email,
@@ -38,14 +37,14 @@ let EmailService = EmailService_1 = class EmailService {
                     html: htmlContent,
                 });
                 if (error) {
-                    this.logger.error(`Error al enviar email a ${email}: ${error.message}`);
-                    return;
+                    throw new Error(error.message);
                 }
                 this.logger.log(`Email de actualización enviado a ${email}`);
             }
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 this.logger.error(`Error al enviar email a ${email}: ${errorMessage}`);
+                throw error;
             }
         })());
     }
@@ -96,12 +95,14 @@ let EmailService = EmailService_1 = class EmailService {
     `;
     }
     sendNotificationConfirmation(user) {
-        const email = user.email ?? '';
+        const email = user.email;
+        if (!email) {
+            return (0, rxjs_1.from)(Promise.reject(new Error('El usuario no tiene email')));
+        }
         return (0, rxjs_1.from)((async () => {
             try {
                 const htmlContent = this.generateEmailconfirmationHTML(user);
-                const from = this.configService.get('EMAIL_FROM') ??
-                    'onboarding@resend.dev';
+                const from = this.configService.getOrThrow('EMAIL_FROM');
                 const { error } = await this.resend.emails.send({
                     from,
                     to: email,
@@ -109,14 +110,14 @@ let EmailService = EmailService_1 = class EmailService {
                     html: htmlContent,
                 });
                 if (error) {
-                    this.logger.error(`Error al enviar email a ${email}: ${error.message}`);
-                    return;
+                    throw new Error(error.message);
                 }
                 this.logger.log(`Email de actualización enviado a ${email}`);
             }
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 this.logger.error(`Error al enviar email a ${email}: ${errorMessage}`);
+                throw error;
             }
         })());
     }

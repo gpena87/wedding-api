@@ -18,19 +18,17 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY') ?? '';
+    const apiKey = this.configService.getOrThrow<string>('RESEND_API_KEY');
     this.resend = new Resend(apiKey);
   }
 
   sendNotification(user: EmailPayload): Observable<void> {
-    const email = this.configService.get<string>('EMAIL_SEND') ?? '';
+    const email = this.configService.getOrThrow<string>('EMAIL_SEND');
     return from(
       (async () => {
         try {
           const htmlContent = this.generateEmailHTML(user);
-          const from =
-            this.configService.get<string>('EMAIL_FROM') ??
-            'onboarding@resend.dev';
+          const from = this.configService.getOrThrow<string>('EMAIL_FROM');
           const { error } = await this.resend.emails.send({
             from,
             to: email,
@@ -39,10 +37,7 @@ export class EmailService {
           });
 
           if (error) {
-            this.logger.error(
-              `Error al enviar email a ${email}: ${error.message}`,
-            );
-            return;
+            throw new Error(error.message);
           }
 
           this.logger.log(`Email de actualización enviado a ${email}`);
@@ -52,6 +47,7 @@ export class EmailService {
           this.logger.error(
             `Error al enviar email a ${email}: ${errorMessage}`,
           );
+          throw error;
         }
       })(),
     );
@@ -105,14 +101,15 @@ export class EmailService {
   }
 
   sendNotificationConfirmation(user: EmailPayload): Observable<void> {
-    const email = user.email ?? '';
+    const email = user.email;
+    if (!email) {
+      return from(Promise.reject(new Error('El usuario no tiene email')));
+    }
     return from(
       (async () => {
         try {
           const htmlContent = this.generateEmailconfirmationHTML(user);
-          const from =
-            this.configService.get<string>('EMAIL_FROM') ??
-            'onboarding@resend.dev';
+          const from = this.configService.getOrThrow<string>('EMAIL_FROM');
           const { error } = await this.resend.emails.send({
             from,
             to: email,
@@ -121,10 +118,7 @@ export class EmailService {
           });
 
           if (error) {
-            this.logger.error(
-              `Error al enviar email a ${email}: ${error.message}`,
-            );
-            return;
+            throw new Error(error.message);
           }
 
           this.logger.log(`Email de actualización enviado a ${email}`);
@@ -134,6 +128,7 @@ export class EmailService {
           this.logger.error(
             `Error al enviar email a ${email}: ${errorMessage}`,
           );
+          throw error;
         }
       })(),
     );

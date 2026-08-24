@@ -8,7 +8,7 @@ async function bootstrap() {
         origin: [
             'http://localhost:4200',
             'http://localhost:3000',
-            'https://wedding-api-production-dcfe.up.railway.app',
+            'https://wedding-app-production-30ec.up.railway.app',
         ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
