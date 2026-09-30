@@ -10,7 +10,7 @@ async function bootstrap() {
       'http://localhost:4200', // Desarrollo local Angular
       'http://localhost:3000', // Desarrollo local otros puertos
       'https://wedding-app-production-30ec.up.railway.app', // Frontend en producción
-      'wedding-mj-g.up.railway.app'
+      'https://wedding-mj-g.up.railway.app'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
