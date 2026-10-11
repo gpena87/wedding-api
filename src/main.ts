@@ -5,8 +5,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Configuración de CORS para permitir llamadas desde frontend en desarrollo y producción
+  const extraOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
     origin: [
+      ...extraOrigins,
       'http://localhost:4200', // Desarrollo local Angular
       'http://localhost:3000', // Desarrollo local otros puertos
       'https://wedding-app-production-30ec.up.railway.app', // Frontend en producción
