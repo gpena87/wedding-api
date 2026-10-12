@@ -4,11 +4,18 @@ const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const extraOrigins = (process.env.CORS_ORIGINS ?? '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
     app.enableCors({
         origin: [
+            ...extraOrigins,
             'http://localhost:4200',
             'http://localhost:3000',
             'https://wedding-app-production-30ec.up.railway.app',
+            'https://wedding-mj-g.up.railway.app',
+            'https://wedding-app-qa.up.railway.app'
         ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
