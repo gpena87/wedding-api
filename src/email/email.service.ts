@@ -52,7 +52,12 @@ export class EmailService {
         );
       }
 
-      this.logger.log(`Email enviado a ${email}`);
+      const result = (await response.json().catch(() => ({}))) as {
+        messageId?: string;
+      };
+      this.logger.log(
+        `Email aceptado por Brevo para ${email} (messageId: ${result.messageId ?? "desconocido"})`,
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
