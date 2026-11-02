@@ -13,40 +13,50 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const resend_1 = require("resend");
 const rxjs_1 = require("rxjs");
 let EmailService = EmailService_1 = class EmailService {
     configService;
-    resend;
     logger = new common_1.Logger(EmailService_1.name);
     constructor(configService) {
         this.configService = configService;
-        const apiKey = this.configService.getOrThrow('RESEND_API_KEY');
-        this.resend = new resend_1.Resend(apiKey);
     }
     sendNotification(user) {
-        const email = this.configService.getOrThrow('EMAIL_SEND');
-        return (0, rxjs_1.from)((async () => {
-            try {
-                const htmlContent = this.generateEmailHTML(user);
-                const from = this.configService.getOrThrow('EMAIL_FROM');
-                const { error } = await this.resend.emails.send({
-                    from,
-                    to: email,
-                    subject: 'Confirmacion',
-                    html: htmlContent,
-                });
-                if (error) {
-                    throw new Error(error.message);
-                }
-                this.logger.log(`Email de actualización enviado a ${email}`);
+        const email = this.configService.getOrThrow("EMAIL_SEND");
+        return (0, rxjs_1.from)(this.sendEmail(email, this.generateEmailHTML(user)));
+    }
+    async sendEmail(email, htmlContent) {
+        try {
+            const apiKey = this.configService.getOrThrow("BREVO_API_KEY");
+            const senderEmail = this.configService.getOrThrow("EMAIL_FROM");
+            const senderName = this.configService.get("EMAIL_FROM_NAME");
+            const sender = senderName
+                ? { email: senderEmail, name: senderName }
+                : { email: senderEmail };
+            const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+                method: "POST",
+                headers: {
+                    accept: "application/json",
+                    "api-key": apiKey,
+                    "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                    sender,
+                    to: [{ email }],
+                    subject: "Confirmacion",
+                    htmlContent,
+                }),
+            });
+            if (!response.ok) {
+                const errorDetails = await response.text();
+                throw new Error(`Brevo API respondió ${response.status}: ${errorDetails}`);
             }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                this.logger.error(`Error al enviar email a ${email}: ${errorMessage}`);
-                throw error;
-            }
-        })());
+            this.logger.log(`Email enviado a ${email}`);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Error al enviar email a ${email}: ${errorMessage}`);
+            throw error;
+        }
     }
     generateEmailHTML(user) {
         return `
@@ -70,22 +80,22 @@ let EmailService = EmailService_1 = class EmailService {
             <div class="card-body" style="text-align: left;">
               <ul style="padding: 0; margin: 0;">
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Nombre:</strong> ${user.name || 'Sin información'}
+                  <strong>Nombre:</strong> ${user.name || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Apellido:</strong> ${user.lastName || 'Sin información'}
+                  <strong>Apellido:</strong> ${user.lastName || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Email:</strong> ${user.email || 'Sin información'}
+                  <strong>Email:</strong> ${user.email || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Teléfono:</strong> ${user.numberPhone || 'Sin información'}
+                  <strong>Teléfono:</strong> ${user.numberPhone || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Restricciones:</strong> ${user.restriccion || 'Sin información'}
+                  <strong>Restricciones:</strong> ${user.restriccion || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Mensaje:</strong> ${user.message || 'Sin información'}
+                  <strong>Mensaje:</strong> ${user.message || "Sin información"}
                 </li>
               </ul>
             </div>
@@ -97,31 +107,11 @@ let EmailService = EmailService_1 = class EmailService {
     sendNotificationConfirmation(user) {
         const email = user.email;
         if (!email) {
-            return (0, rxjs_1.from)(Promise.reject(new Error('El usuario no tiene email')));
+            return (0, rxjs_1.from)(Promise.reject(new Error("El usuario no tiene email")));
         }
-        return (0, rxjs_1.from)((async () => {
-            try {
-                const htmlContent = this.generateEmailconfirmationHTML(user);
-                const from = this.configService.getOrThrow('EMAIL_FROM');
-                const { error } = await this.resend.emails.send({
-                    from,
-                    to: email,
-                    subject: 'Confirmacion',
-                    html: htmlContent,
-                });
-                if (error) {
-                    throw new Error(error.message);
-                }
-                this.logger.log(`Email de actualización enviado a ${email}`);
-            }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                this.logger.error(`Error al enviar email a ${email}: ${errorMessage}`);
-                throw error;
-            }
-        })());
+        return (0, rxjs_1.from)(this.sendEmail(email, this.generateEmailConfirmationHTML(user)));
     }
-    generateEmailconfirmationHTML(user) {
+    generateEmailConfirmationHTML(user) {
         return `
       <!DOCTYPE html>
       <html>

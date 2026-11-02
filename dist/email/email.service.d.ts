@@ -1,5 +1,5 @@
-import { ConfigService } from '@nestjs/config';
-import { Observable } from 'rxjs';
+import { ConfigService } from "@nestjs/config";
+import { Observable } from "rxjs";
 interface EmailPayload {
     name?: string;
     lastName?: string;
@@ -10,12 +10,12 @@ interface EmailPayload {
 }
 export declare class EmailService {
     private configService;
-    private resend;
     private readonly logger;
     constructor(configService: ConfigService);
     sendNotification(user: EmailPayload): Observable<void>;
+    private sendEmail;
     private generateEmailHTML;
     sendNotificationConfirmation(user: EmailPayload): Observable<void>;
-    private generateEmailconfirmationHTML;
+    private generateEmailConfirmationHTML;
 }
 export {};
