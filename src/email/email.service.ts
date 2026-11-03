@@ -9,6 +9,7 @@ interface EmailPayload {
   numberPhone?: string;
   restriccion?: string;
   message?: string;
+  confirmation?: boolean;
 }
 
 @Injectable()
@@ -100,6 +101,9 @@ export class EmailService {
             </div>
             <div class="card-body" style="text-align: left;">
               <ul style="padding: 0; margin: 0;">
+                <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
+                  <strong>Asistencia:</strong> ${user.confirmation ? "✅ Confirmada" : "❌ No confirmada"}
+                </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
                   <strong>Nombre:</strong> ${user.name || "Sin información"}
                 </li>

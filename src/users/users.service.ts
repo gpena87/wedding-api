@@ -21,7 +21,11 @@ export class UsersService {
       switchMap((user) =>
         this.emailService.sendNotification(user).pipe(map(() => user)),
       ),
-      switchMap((user) => this.emailService.sendNotificationConfirmation(user)),
+      switchMap((user) =>
+        user.confirmation
+          ? this.emailService.sendNotificationConfirmation(user)
+          : of(undefined),
+      ),
       map(() => {
         this.logger.log(`Usuario creado y email enviado`);
         return {
