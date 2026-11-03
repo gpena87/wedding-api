@@ -18,11 +18,24 @@ export class EmailService {
   constructor(private configService: ConfigService) {}
 
   sendNotification(user: EmailPayload): Observable<void> {
-    const email = this.configService.getOrThrow<string>("EMAIL_SEND");
-    return from(this.sendEmail(email, this.generateEmailHTML(user)));
+    const recipients = this.configService
+      .getOrThrow<string>("EMAIL_SEND")
+      .split(",")
+      .map((address) => address.trim())
+      .filter(Boolean);
+    if (recipients.length === 0) {
+      return from(
+        Promise.reject(new Error("EMAIL_SEND no tiene destinatarios")),
+      );
+    }
+    return from(this.sendEmail(recipients, this.generateEmailHTML(user)));
   }
 
-  private async sendEmail(email: string, htmlContent: string): Promise<void> {
+  private async sendEmail(
+    recipients: string[],
+    htmlContent: string,
+  ): Promise<void> {
+    const email = recipients.join(", ");
     try {
       const apiKey = this.configService.getOrThrow<string>("BREVO_API_KEY");
       const senderEmail = this.configService.getOrThrow<string>("EMAIL_FROM");
@@ -39,7 +52,7 @@ export class EmailService {
         },
         body: JSON.stringify({
           sender,
-          to: [{ email }],
+          to: recipients.map((address) => ({ email: address })),
           subject: "Confirmacion",
           htmlContent,
         }),
@@ -119,7 +132,7 @@ export class EmailService {
       return from(Promise.reject(new Error("El usuario no tiene email")));
     }
     return from(
-      this.sendEmail(email, this.generateEmailConfirmationHTML(user)),
+      this.sendEmail([email], this.generateEmailConfirmationHTML(user)),
     );
   }
 
