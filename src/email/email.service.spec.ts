@@ -12,7 +12,7 @@ describe("EmailService", () => {
         const values: Record<string, string> = {
           BREVO_API_KEY: "test-api-key",
           EMAIL_FROM: "sender@example.com",
-          EMAIL_SEND: "admin@example.com",
+          EMAIL_SEND: "admin@example.com, second@example.com",
         };
         return values[key];
       }),
@@ -43,7 +43,9 @@ describe("EmailService", () => {
       "content-type": "application/json",
     });
     expect(options?.body).toEqual(
-      expect.stringContaining('"email":"admin@example.com"'),
+      expect.stringContaining(
+        '"to":[{"email":"admin@example.com"},{"email":"second@example.com"}]',
+      ),
     );
   });
 
