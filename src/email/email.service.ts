@@ -1,7 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
-import { Observable, from } from 'rxjs';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Observable, from } from "rxjs";
 
 interface EmailPayload {
   name?: string;
@@ -14,43 +13,57 @@ interface EmailPayload {
 
 @Injectable()
 export class EmailService {
-  private resend: Resend;
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) {
-    const apiKey = this.configService.getOrThrow<string>('RESEND_API_KEY');
-    this.resend = new Resend(apiKey);
-  }
+  constructor(private configService: ConfigService) {}
 
   sendNotification(user: EmailPayload): Observable<void> {
-    const email = this.configService.getOrThrow<string>('EMAIL_SEND');
-    return from(
-      (async () => {
-        try {
-          const htmlContent = this.generateEmailHTML(user);
-          const from = this.configService.getOrThrow<string>('EMAIL_FROM');
-          const { error } = await this.resend.emails.send({
-            from,
-            to: email,
-            subject: 'Confirmacion',
-            html: htmlContent,
-          });
+    const email = this.configService.getOrThrow<string>("EMAIL_SEND");
+    return from(this.sendEmail(email, this.generateEmailHTML(user)));
+  }
 
-          if (error) {
-            throw new Error(error.message);
-          }
+  private async sendEmail(email: string, htmlContent: string): Promise<void> {
+    try {
+      const apiKey = this.configService.getOrThrow<string>("BREVO_API_KEY");
+      const senderEmail = this.configService.getOrThrow<string>("EMAIL_FROM");
+      const senderName = this.configService.get<string>("EMAIL_FROM_NAME");
+      const sender = senderName
+        ? { email: senderEmail, name: senderName }
+        : { email: senderEmail };
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender,
+          to: [{ email }],
+          subject: "Confirmacion",
+          htmlContent,
+        }),
+      });
 
-          this.logger.log(`Email de actualización enviado a ${email}`);
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          this.logger.error(
-            `Error al enviar email a ${email}: ${errorMessage}`,
-          );
-          throw error;
-        }
-      })(),
-    );
+      if (!response.ok) {
+        const errorDetails = await response.text();
+        throw new Error(
+          `Brevo API respondió ${response.status}: ${errorDetails}`,
+        );
+      }
+
+      const result = (await response.json().catch(() => ({}))) as {
+        messageId?: string;
+      };
+      this.logger.log(
+        `Email aceptado por Brevo para ${email} (messageId: ${result.messageId ?? "desconocido"})`,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error al enviar email a ${email}: ${errorMessage}`);
+      throw error;
+    }
   }
 
   private generateEmailHTML(user: EmailPayload): string {
@@ -75,22 +88,22 @@ export class EmailService {
             <div class="card-body" style="text-align: left;">
               <ul style="padding: 0; margin: 0;">
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Nombre:</strong> ${user.name || 'Sin información'}
+                  <strong>Nombre:</strong> ${user.name || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Apellido:</strong> ${user.lastName || 'Sin información'}
+                  <strong>Apellido:</strong> ${user.lastName || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Email:</strong> ${user.email || 'Sin información'}
+                  <strong>Email:</strong> ${user.email || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Teléfono:</strong> ${user.numberPhone || 'Sin información'}
+                  <strong>Teléfono:</strong> ${user.numberPhone || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Restricciones:</strong> ${user.restriccion || 'Sin información'}
+                  <strong>Restricciones:</strong> ${user.restriccion || "Sin información"}
                 </li>
                 <li style="margin-bottom: 10px; list-style: none; padding: 8px 12px; background: #f9fafb; border-radius: 8px;">
-                  <strong>Mensaje:</strong> ${user.message || 'Sin información'}
+                  <strong>Mensaje:</strong> ${user.message || "Sin información"}
                 </li>
               </ul>
             </div>
@@ -103,38 +116,14 @@ export class EmailService {
   sendNotificationConfirmation(user: EmailPayload): Observable<void> {
     const email = user.email;
     if (!email) {
-      return from(Promise.reject(new Error('El usuario no tiene email')));
+      return from(Promise.reject(new Error("El usuario no tiene email")));
     }
     return from(
-      (async () => {
-        try {
-          const htmlContent = this.generateEmailconfirmationHTML(user);
-          const from = this.configService.getOrThrow<string>('EMAIL_FROM');
-          const { error } = await this.resend.emails.send({
-            from,
-            to: email,
-            subject: 'Confirmacion',
-            html: htmlContent,
-          });
-
-          if (error) {
-            throw new Error(error.message);
-          }
-
-          this.logger.log(`Email de actualización enviado a ${email}`);
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          this.logger.error(
-            `Error al enviar email a ${email}: ${errorMessage}`,
-          );
-          throw error;
-        }
-      })(),
+      this.sendEmail(email, this.generateEmailConfirmationHTML(user)),
     );
   }
 
-  private generateEmailconfirmationHTML(user: EmailPayload): string {
+  private generateEmailConfirmationHTML(user: EmailPayload): string {
     return `
       <!DOCTYPE html>
       <html>
